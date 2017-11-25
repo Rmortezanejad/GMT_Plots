@@ -1,0 +1,38 @@
+#!bin/bash
+
+#	Replace this with the current working directory
+DIR=~/GMT/
+
+#	if output file exists, delete it
+if [ -f $DIR/out1.txt ] ;
+	then rm -f $DIR/out1.txt
+fi
+
+# Input: GCMT psmeca files. = GCMTfile
+
+awk 'NR>18 {print($1,$2,$3)}' FullDepthM.txt > out2.txt
+
+#	Remove last 17 lines
+head -n-17 out2.txt > out3.txt
+
+#	GMT Project command
+project out3.txt -Q -C92/12 -A90 > GCMT2.txt
+
+#	DECLARE YOUR VARIABLES HERE	##
+##################################
+	SCALE=18	# make plot 15cm across
+	RANGE=0/800/-200/0
+	ticks=a200/a200
+#	OUTFILE=$0.ps 	# Output file
+##################################
+
+#psbasemap -R$RANGE -JM8 -B$ticks -P -K -X7 -Y8 > $0.ps
+
+#pscoast -R -JM -O -K -Di -W4/155/0/255 -Na1 -G200/200/0 -S10/200/220 >>$0.ps
+
+
+awk '{print($4,$3*(-1.0))}' GCMT2.txt | psxy -R$RANGE -JX8 -B$ticks -Ss.1 -P -X7 -Y8 -K > $0.ps
+
+ps2pdf $0.ps
+
+see $0.pdf
