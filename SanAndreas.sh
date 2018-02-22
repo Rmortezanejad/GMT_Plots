@@ -1,6 +1,6 @@
 #!bin/bash
 
-# Sumatra-Andaman map
+# Central-Southern California map
 #
 
 # Things to do in terminal prior to plotting the data:
@@ -10,6 +10,8 @@
 # 2. Change the c-shell script to an executable file by using chmod +x fileName.csh
 
 # Add preferences here
+#gmt gmtset MAP_FRAME_PEN 3
+
 gmt gmtset FORMAT_GEO_MAP DD #set labels on the map to decimal degrees
 
 gmt gmtset MAP_FRAME_TYPE fancy #make outline of the map a single line with ticks
@@ -25,13 +27,13 @@ gmt gmtset MAP_LABEL_OFFSET 0.3c #offset the labels up by 0.3 cm
 gmt gmtset FONT_ANNOT_PRIMARY 12p #size of the primary annotation font
 
 #set the -R flag: LONleft/LONright/ LATbottom/ LATtop
-region="-R88/100/0/15"
+region="-R-123.596/-114.675/32.291/39.048"
 
 #set the -J flag:
 #-JM6i= mercator projection with longest axis=6 inches
-#-JX7i/2i= XY projection 7 inches horizontal and 2 inches vertical
+#-JX7i/2i= XY projection 7 inches horizontal and 2 inches vertical 
 #
-projection="-JM4i"
+projection="-JM6i"
 
 #used with the opening/first postscript file
 open="-K -V"
@@ -50,10 +52,10 @@ pdfFile=$0.pdf
 
 
 #Start code here
-misc="-X5.5 -Y15"
+misc="-X2 -Y14" #Shift the map in the page
 gmt psbasemap $region $projection -P -B2/2WSen $misc $open > $psFile
 #-B flag parameters: -B20g10f5:"x-axis label":/5g2.5f1:"y-axis label"::."Title of Plot":WSen
-# 20g10f5:"x-axis label":
+# 20g10f5:"x-axis label": 
 #					20 = label increment
 #					g10 = grid spacing
 #					f5 = small tick mark spacing
@@ -72,94 +74,55 @@ gmt psbasemap $region $projection -P -B2/2WSen $misc $open > $psFile
 #make color pallete
 gmt makecpt -Crelief -T-8000/8000/500 -Z > topo.cpt
 
-gmt pscoast $region $projection $add -W2 -Df -Na -Ia -Lf89.4/14/10/200+lkm >> $psFile
+#gmt grdgradient $topo -A135 -Ne0.8 -Gshadow.grd
 
-gmt makecpt -Crainbow -T0/50/10 -Z > seis.cpt
+gmt grdimage $region $projection $add -Ctopo.cpt -Ishadow.grd >> $psFile
 
-awk 'NR>18 {print($1,$2,$3)}' GCMT_psmeca.txt | psxy $region $projection $add -W.1 -Sc.2 -Cseis.cpt >> $psFile
+gmt pscoast $region $projection $add -W2 -Di -Na -Ia -Lf89.4/14/10/200+lkm >> $psFile
+
+gmt makecpt -Crainbow -T0/20/2 -Z > seis.cpt
+
+awk -F "," 'NR>1 {print($3,$2,$4,($5-3)*(0.25))}' SanAndreas_Data.csv | psxy $region $projection $add -W.1 -Scc -Cseis.cpt >> $psFile
 
 psscale -D0/3.2/6/1 -B10:Depth:/:km: -Cseis.cpt $add >> $psFile
 
-
-# View Transect line 1
+# View dashed line along fault strike
 psxy $region $projection $add -W1 -Ss.2 -G255/0/0 <<END>> $psFile
-92 9
-93 6
-94 3
+-117 32.5
+-119.8 35.5
+-123.4 39
 END
 
 psxy $region $projection $add -Wthin,red,- <<END>> $psFile
-92 9
-94 3
+-117 32.5
+-123.4 39
 END
 
+# View transect line
 psxy $region $projection $add -Wthick,red <<END>> $psFile
-90 5
-96 7
+-122 34
+-116 38
 END
 
-# View transect line 2
-psxy $region $projection $add -W1 -Ss.2 -G255/0/0 <<END>> $psFile
-94 3
-96 1.5
-98 0
-END
-
-psxy $region $projection $add -Wthin,red,- <<END>> $psFile
-94 3
-98 0
-END
-
-psxy $region $projection $add -Wthick,red <<END>> $psFile
-95 0
-98.3 4.7
-END
-
-# View transect line 3
-psxy $region $projection $add -W1 -Ss.2 -G255/0/0 <<END>> $psFile
-91.6 9
-92 11.5
-92.5 14
-END
-
-psxy $region $projection $add -Wthin,red,- <<END>> $psFile
-91.6 9
-92.5 14
-END
-
-psxy $region $projection $add -Wthick,red <<END>> $psFile
-91.3 11.7
-96 10.5
-END
-
-pstext $region $projection $add -N -F+f12p,Helvetica-Bold,red <<END>> $psFile
-96.6 10.5 14 0 5 MC (1)
-96.5 7.2 14 0 5 MC (2)
-98.5 5 14 0 5 MC (3)
-END
+#pstext $region $projection $add -N -F+f12p,Helvetica-Bold,red <<END>> $psFile
+#98.5 5 14 0 5 MC (3)
+#END
 
 #USE PSMECA AND PSVELOMECA TO GET A COMMON FILE WITH FOCAL MECHANISM AND LOCATION
-join GCMT_psmeca.txt GCMT_psvelomeca.txt > temp1.txt
-awk 'NR>34 {print($1,$2,$3,$15,$16,$17,$18,$19,$20)}' temp1.txt > temp2.txt
+#join GCMT_psmeca.txt GCMT_psvelomeca.txt > temp1.txt
+#awk 'NR>34 {print($1,$2,$3,$15,$16,$17,$18,$19,$20)}' temp1.txt > temp2.txt
 
 #PROJECT DATA
-awk 'NR>18 {print($1,$2,$3,$4,$5,$6,$7,$8,$9)}' temp2.txt | project -C93/6 -E96/7 -W-1.5/1.5 -Lw > projection2.dat
-awk 'NR>18 {print($1,$2,$3,$4,$5,$6,$7,$8,$9)}' temp2.txt | project -C91.5/11.5 -E96/10.5 -W-1.2/1.2 -Lw > projection1.dat
-awk 'NR>18 {print($1,$2,$3,$4,$5,$6,$7,$8,$9)}' temp2.txt | project -C95/0 -E98.3/4.7 -W-1.2/1.2 -Lw > projection3.dat
+awk -F "," 'NR>1 {print($3,$2,$4)}' SanAndreas_Data.csv | project -C-122/34 -E-116/38 -W-2.6/2.6 -Lw > projection3.dat
 
 rm -f temp1.txt temp2.txt
 
 #MAKE SCATTER PLOT
-region="-R90/96/-100/0"
-projection="-JX4i/1.5i"
-misc="-Y-5"
-awk '{print($12,$3*(-1.0))}' projection1.dat | psxy $region $projection -B1:Longitude:/20:Depth:WSen -W1 -Sc.2 -G200 $misc $close >> $psFile
+region="-R-124/-114/-16/0"
+projection="-JX6i/3i"
+misc="-Y-9"
+awk '{print($6,$3*(-1.0))}' projection3.dat | psxy $region $projection -B2:Longitude:/4:Depth:WSen -W1 -Sc.2 -G200 $misc $close >> $psFile
 
-
-region="-R92/96/-100/0"
-projection="-JX4i/1.5i"
-misc="-Y-8"
-awk '{print($12,$3*(-1.0))}' projection2.dat | psxy $region $projection -B1:Longitude:/20:Depth:WSen -W1 -Sc.2 -G200 $misc $close >> $psFile
 
 ps2pdf $psFile $pdfFile
 
